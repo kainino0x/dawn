@@ -34,13 +34,12 @@ See [building.md](../../docs/building.md).
 You can either build the bindings "standalone" and link them manually,
 or if your project uses CMake you can link to it as a CMake subproject.
 
-### Using Dawn as a CMake subproject (bindings only)
+### Using pre-built emdawnwebgpu bindings (bindings only)
 
-TODO(crbug.com/371024051): Provide a sample!
+See [pkg_README.txt](../third_party/emdawnwebgpu/pkg_README.txt) which is
+distributed with pre-built emdawnwebgpu packages.
 
-### Using pre-built emdawnwebgpu bindings via CMake (bindings only)
-
-TODO(crbug.com/371024051): Make pre-built bindings and provide a sample!
+TODO(crbug.com/371024051): Publish the pre-built bindings and provide a sample!
 
 ### Standalone with CMake (bindings and samples)
 
