@@ -1,0 +1,71 @@
+name: release
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '50 5 * * *'  # 05:50 UTC (21:50 PST, 22:50 PDT)
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release-emdawnwebgpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        id: build
+        run: |
+          set -euo pipefail
+
+          SHA=$(git rev-parse HEAD)
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          if [[ "${{ github.event_name }}" != "schedule" ]] ; then
+            RELEASE_TYPE=Manual
+            DATE_VER=v$(date '+%Y.%m.%d-%H.%M.%S')
+          else
+            RELEASE_TYPE=Nightly
+            DATE_VER=v$(date '+%Y.%m.%d')
+          fi
+          PKG_FILE=emdawnwebgpu_pkg-${DATE_VER}.zip
+
+          # Initialize gclient
+          git submodule update --init third_party/depot_tools/
+          PATH=$PWD/third_party/depot_tools:$PATH
+          gclient sync --version
+
+          # Fetch dependencies
+          cp scripts/standalone-with-wasm.gclient .gclient
+          gclient sync -D --no-history --shallow
+
+          # Build
+          mkdir -p out/wasm
+          third_party/emsdk/upstream/emscripten/emcmake cmake -S=. -B=out/wasm
+          make -j4 -C out/wasm emdawnwebgpu_pkg
+
+          # Create zip
+          echo "${DATE_VER} (Dawn revision ${SHA})" > out/wasm/emdawnwebgpu_pkg/VERSION.txt
+          (cd out/wasm && zip -9 -r ../../${PKG_FILE} emdawnwebgpu_pkg)
+
+          # Save version numbers for later steps
+          echo "SHA_SHORT=$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "DATE_VER=$DATE_VER" >> $GITHUB_OUTPUT
+          echo "PKG_FILE=$PKG_FILE" >> $GITHUB_OUTPUT
+          echo "RELEASE_TYPE=$RELEASE_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Upload release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          # Create a Git tag with this name
+          tag_name: ${{ steps.build.outputs.DATE_VER }}
+          # User-facing release info
+          name: ${{ steps.build.outputs.DATE_VER }} (Dawn ${{ steps.build.outputs.SHA_SHORT }})
+          body: |
+            ${{ steps.build.outputs.RELEASE_TYPE }} Dawn release ${{ steps.build.outputs.DATE_VER }} at revision [${{ steps.build.outputs.SHA_SHORT }}](https://dawn.googlesource.com/dawn/+/${{ github.sha }}).
+          # Files to release (one per line)
+          files: |
+            ${{ steps.build.outputs.PKG_FILE }}
