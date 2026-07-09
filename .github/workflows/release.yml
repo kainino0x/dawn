@@ -31,11 +31,8 @@ jobs:
             ${{ steps.build.outputs.PKG_FILE }}
             RELEASE_INFO.md
 
-  build-native:
-    uses: ./.github/workflows/ci.yml
-
   publish:
-    needs: [build-wasm, build-native]
+    needs: [build-wasm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -59,10 +56,6 @@ jobs:
             --title "$TAG_NAME" \
             --repo ${{ github.repository }} \
             --notes-file RELEASE_INFO.md \
-            artifacts/Dawn-*/Dawn-*.tar.gz \
-            artifacts/dawn-android-*/dawn-android-*.tar.gz \
-            artifacts/dawn-apple-*/dawn-apple-*.xcframework.tar.gz \
-            artifacts/dawn-headers-*/dawn-headers-*.tar.gz \
             artifacts/emdawnwebgpu/*
 
   alert-on-failure:
